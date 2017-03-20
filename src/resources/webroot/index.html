@@ -1,0 +1,102 @@
+<html>
+<head>
+    <title>Twitter Wall</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+    <script src="sockjs.min.js"></script>
+    <script src="vertx-eventbus.js"></script>
+    <script src="twitter_updater_interface-proxy.js"></script>
+</head>
+<body>
+<script>
+    $(document).ready(function() {
+        var eb = new EventBus('http://localhost:8080/eventbus');
+        var twitterUpdater = null;
+        var nextInterval = null;
+        var searchQuery = getSearchQuery();
+
+        function getSearchQuery() {
+            return $("#hashtagInput").val();
+        }
+
+        function getTimeoutInterval() {
+            return parseInt($("#updateIntervalInput").val()) * 1000;
+        }
+
+        function updateConfig() {
+            searchQuery = getSearchQuery()
+            if (nextInterval != null)
+                clearInterval(nextInterval);
+            updateWall();
+            nextInterval = setInterval(function () {
+                updateWall();
+            }, getTimeoutInterval())
+        }
+
+        function updateWall() {
+            twitterUpdater.updateTwitter(searchQuery, function (err, res) {
+                console.log(res);
+                $("#table_body").empty();
+                res.statuses.forEach(function (element) {
+                    $('<tr>').html("<td>" + element.user.screen_name + "</td><td>" + element.created_at + "</td><td>" + element.text + "</td>").appendTo('#table_body');
+                });
+            });
+        }
+
+        eb.onopen = function () {
+            console.log("OPENED");
+            twitterUpdater = new TwitterUpdaterInterface(eb, "twitterupdater");
+            updateConfig()
+        };
+
+        $('#submitUpdate').on('click', function (event) {
+            event.preventDefault(); // To prevent following the link (optional)
+            updateConfig()
+        });
+    });
+
+
+</script>
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-12">
+            <h3>
+               Twitter Wall by Francesco Guardiani for GSOC 2017
+            </h3>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-12">
+            <form role="form">
+                <div class="form-group">
+
+                    <label for="hashtagInput">
+                        Search:
+                    </label>
+                    <input class="form-control" id="hashtagInput" value="Red Hat"/>
+
+                    <label for="updateIntervalInput">
+                        Update interval
+                    </label>
+                    <input class="form-control" id="updateIntervalInput" value="5"\>
+
+                    <button type="button" class="btn btn-default" id="submitUpdate">Refresh configuration</button>
+                </div>
+            </form>
+            <table class="table">
+                <thead>
+                <tr>
+                    <th>Username</th>
+                    <th>Date-time</th>
+                    <th>Tweet</th>
+                </tr>
+                </thead>
+                <tbody id="table_body">
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+</body>
+</html>
