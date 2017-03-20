@@ -4,5 +4,5 @@ gradle
 gradlew
 gradlew.bat
 .vertx
-src/main/conf/conf.json
+conf.json
 .idea

@@ -41,6 +41,6 @@ public class Server extends AbstractVerticle {
         SockJSHandler ebHandler = SockJSHandler.create(vertx).bridge(opts);
         router.route("/eventbus/*").handler(ebHandler);
 
-        vertx.createHttpServer().requestHandler(router::accept).listen(8080);
+        vertx.createHttpServer().requestHandler(router::accept).listen(config().getInteger("http_port", 8080));
     }
 }
