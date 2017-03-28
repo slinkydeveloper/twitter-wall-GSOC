@@ -25,6 +25,6 @@ public interface TwitterUpdaterInterface {
 
     // The service methods
 
-    void updateTwitter(String hashtag, Handler<AsyncResult<JsonObject>> resultHandler);
+    void updateTwitter(String search, String since_id, Handler<AsyncResult<JsonObject>> resultHandler);
 
 }

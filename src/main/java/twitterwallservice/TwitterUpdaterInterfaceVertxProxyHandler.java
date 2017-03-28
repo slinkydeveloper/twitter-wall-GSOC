@@ -125,7 +125,7 @@ public class TwitterUpdaterInterfaceVertxProxyHandler extends ProxyHandler {
 
 
         case "updateTwitter": {
-          service.updateTwitter((java.lang.String)json.getValue("hashtag"), createHandler(msg));
+          service.updateTwitter((java.lang.String)json.getValue("search"), (java.lang.String)json.getValue("since_id"), createHandler(msg));
           break;
         }
         default: {

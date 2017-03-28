@@ -17,8 +17,8 @@ public class TwitterUpdaterInterfaceImpl implements TwitterUpdaterInterface {
     }
 
     @Override
-    public void updateTwitter(String hashtag, Handler<AsyncResult<JsonObject>> resultHandler) {
-        System.out.println("Requested twitter wall update with hashtag: " + hashtag);
-        twitterHTTPClient.updateTwitterWall(hashtag, resultHandler);
+    public void updateTwitter(String hashtag, String since_id, Handler<AsyncResult<JsonObject>> resultHandler) {
+        System.out.println("Requested twitter wall update with search string: " + hashtag + " and since_id: " + since_id);
+        twitterHTTPClient.updateTwitterWall(hashtag, since_id, resultHandler);
     }
 }

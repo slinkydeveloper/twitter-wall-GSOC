@@ -49,16 +49,17 @@
     /**
 
      @public
-     @param hashtag {string} 
+     @param search {string} 
+     @param since_id {string} 
      @param resultHandler {function} 
      */
-    this.updateTwitter = function(hashtag, resultHandler) {
+    this.updateTwitter = function(search, since_id, resultHandler) {
       var __args = arguments;
-      if (__args.length === 2 && typeof __args[0] === 'string' && typeof __args[1] === 'function') {
+      if (__args.length === 3 && typeof __args[0] === 'string' && typeof __args[1] === 'string' && typeof __args[2] === 'function') {
         if (closed) {
           throw new Error('Proxy is closed');
         }
-        j_eb.send(j_address, {"hashtag":__args[0]}, {"action":"updateTwitter"}, function(err, result) { __args[1](err, result &&result.body); });
+        j_eb.send(j_address, {"search":__args[0], "since_id":__args[1]}, {"action":"updateTwitter"}, function(err, result) { __args[2](err, result &&result.body); });
         return;
       } else throw new TypeError('function invoked with invalid arguments');
     };

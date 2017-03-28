@@ -64,13 +64,14 @@ public class TwitterUpdaterInterfaceVertxEBProxy implements TwitterUpdaterInterf
     } catch (IllegalStateException ex) {}
   }
 
-  public void updateTwitter(String hashtag, Handler<AsyncResult<JsonObject>> resultHandler) {
+  public void updateTwitter(String search, String since_id, Handler<AsyncResult<JsonObject>> resultHandler) {
     if (closed) {
       resultHandler.handle(Future.failedFuture(new IllegalStateException("Proxy is closed")));
       return;
     }
     JsonObject _json = new JsonObject();
-    _json.put("hashtag", hashtag);
+    _json.put("search", search);
+    _json.put("since_id", since_id);
     DeliveryOptions _deliveryOptions = (_options != null) ? new DeliveryOptions(_options) : new DeliveryOptions();
     _deliveryOptions.addHeader("action", "updateTwitter");
     _vertx.eventBus().<JsonObject>send(_address, _json, _deliveryOptions, res -> {

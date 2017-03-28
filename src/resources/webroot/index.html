@@ -14,6 +14,7 @@
         var twitterUpdater = null;
         var nextInterval = null;
         var searchQuery = getSearchQuery();
+        var since_id = "";
 
         function getSearchQuery() {
             return $("#hashtagInput").val();
@@ -24,9 +25,11 @@
         }
 
         function updateConfig() {
-            searchQuery = getSearchQuery()
+            searchQuery = getSearchQuery();
             if (nextInterval != null)
                 clearInterval(nextInterval);
+            $("#table_body").empty();
+            since_id = "";
             updateWall();
             nextInterval = setInterval(function () {
                 updateWall();
@@ -34,12 +37,18 @@
         }
 
         function updateWall() {
-            twitterUpdater.updateTwitter(searchQuery, function (err, res) {
-                console.log(res);
-                $("#table_body").empty();
-                res.statuses.forEach(function (element) {
-                    $('<tr>').html("<td>" + element.user.screen_name + "</td><td>" + element.created_at + "</td><td>" + element.text + "</td>").appendTo('#table_body');
-                });
+            console.log("Started new update at " + Date.now());
+            twitterUpdater.updateTwitter(searchQuery, since_id, function (err, res) {
+                statuses = res.statuses;
+                console.log("Received update at time " + Date.now() + " with new tweets " + statuses.length);
+                if (statuses.length != 0) {
+                    since_id = statuses[0].id_str; // last id is inside first element received
+                    var resultHTML = "";
+                    statuses.forEach(function (element) {
+                        resultHTML += "<tr><td>" + element.user.name + " (" + element.user.screen_name + ")</td><td>" + element.created_at + "</td><td>" + element.text + "</td></tr>"
+                    });
+                    $("#table_body").prepend($(resultHTML))
+                }
             });
         }
 

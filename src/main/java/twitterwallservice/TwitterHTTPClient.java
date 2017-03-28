@@ -48,7 +48,7 @@ public class TwitterHTTPClient {
         form.set("grant_type", "client_credentials");
 
         String authorizationHeaderEncoded = "Basic " + Base64.getEncoder().encodeToString(new String(api_key + ":" + api_secret).getBytes());
-        System.out.println("authorizationHeaderEncoded: " + authorizationHeaderEncoded);
+        System.out.println("Starting updateAccessToken");
 
         client.post("/oauth2/token").putHeader("Authorization", authorizationHeaderEncoded).sendForm(form, result -> {
             if (result.succeeded()) {
@@ -59,84 +59,63 @@ public class TwitterHTTPClient {
                     next.handle(Future.succeededFuture(false));
                 } else {
                     access_token = response.bodyAsJsonObject().getString("access_token");
+                    System.out.println("Token successfully updated");
                     next.handle(Future.succeededFuture(true));
                 }
             }
         });
     }
 
-    public void updateTwitterWall(String hashtag, Handler<AsyncResult<JsonObject>> next) {
+    private void internalUpdate(String search, Handler<AsyncResult<JsonObject>> next, String since_id, boolean retryWhenTokenExpired) {
         try {
-            String url = "/1.1/search/tweets.json?q=" + URLEncoder.encode(hashtag, "UTF-8");
-            if (access_token == null) {
+            String url = "/1.1/search/tweets.json?q=" + URLEncoder.encode(search, "UTF-8") + ((since_id != null && since_id.length() != 0) ? ("&since_id=" + since_id) : "");
+            System.out.println("Requesting at URL "+ url);
+            client.get(url).putHeader("Authorization", "Bearer " + access_token).send(result -> {
+                if (result.succeeded()) {
+                    HttpResponse<Buffer> response = result.result();
+                    if (response.statusCode() == 419) {
+                        System.err.println("Too many requests!");
+                        next.handle(Future.failedFuture("Too many requests!"));
+                    } else if (response.statusCode() == 401 && retryWhenTokenExpired) {
+                        System.out.println("Token expired! Trying to acquire new token");
+                        this.updateAccessToken(updateResult -> {
+                            if (updateResult.succeeded() && updateResult.result() == false) {
+                                System.err.println("Awesome developer error during updateAccessToken");
+                            } else {
+                                internalUpdate(search, next, since_id, false);
+                            }
+                        });
+                        internalUpdate(search, next, since_id, false);
+                    } else {
+                        System.out.println("Request done");
+                        next.handle(Future.succeededFuture(response.bodyAsJsonObject()));
+                    }
+                } else {
+                    System.out.println("Something went wrong " + result.cause().getMessage());
+                    next.handle(Future.failedFuture("Something went wrong " + result.cause().getMessage()));
+                }
+            });
+        } catch (UnsupportedEncodingException e) {
+        System.err.println("Awesome developer error " + e);
+        }
+    }
+
+    public void updateTwitterWall(String search, String since_id, Handler<AsyncResult<JsonObject>> next) {
+        if (access_token == null) {
+            System.out.println("No access_token");
                 // Some hardcoded stuff :)
                 // If access_token is null, retrieve the access_token and try to make a request
                 this.updateAccessToken(updateResult -> {
                     if (updateResult.succeeded() && updateResult.result() == false) {
                         System.err.println("Awesome developer error during updateAccessToken");
                     } else {
-                        client.get(url).putHeader("Authorization", "Bearer " + access_token).send(result -> {
-                            if (result.succeeded()) {
-                                HttpResponse<Buffer> response = result.result();
-                                if (response.statusCode() == 419) {
-                                    System.err.println("Too many requests!");
-                                    next.handle(Future.failedFuture("Too many requests!"));
-                                }
-                                else {
-                                    System.out.println("Request done");
-                                    next.handle(Future.succeededFuture(response.bodyAsJsonObject()));
-                                }
-                            } else {
-                                System.out.println("Something went wrong " + result.cause().getMessage());
-                                next.handle(Future.failedFuture("Something went wrong " + result.cause().getMessage()));
-                            }
-                        });
+                        internalUpdate(search, next, since_id, false);
                     }
                 });
             } else {
                 // There is an access_token, trying to make a request
-                client.get(url).putHeader("Authorization", "Bearer " + access_token).send(ar -> {
-                    if (ar.succeeded()) {
-                        HttpResponse<Buffer> response = ar.result();
-                        if (response.statusCode() == 401) {
-                            // access_token expired, trying to update
-                            System.out.println("Session key not valid. Response body: " + response.bodyAsString());
-                            updateAccessToken(result -> {
-                                if (result.succeeded() && result.result() == true) {
-                                    client.get(url).putHeader("Authorization", "Bearer " + access_token).send(result2 -> {
-                                        if (ar.succeeded()) {
-                                            HttpResponse<Buffer> response2 = result2.result();
-                                            if (response2.statusCode() == 419) {
-                                                System.err.println("Too many requests!");
-                                                next.handle(Future.failedFuture("Too many requests!"));
-                                            } else {
-                                                System.out.println("Request done");
-                                                next.handle(Future.succeededFuture(response2.bodyAsJsonObject()));
-                                            }
-                                        } else {
-                                            System.out.println("Something went wrong " + result2.cause().getMessage());
-                                            next.handle(Future.failedFuture("Something went wrong " + result2.cause().getMessage()));
-                                        }
-                                    });
-                                } else {
-                                    System.out.println("Something went wrong " + result.cause().getMessage());
-                                    next.handle(Future.failedFuture("Something went wrong " + result.cause().getMessage()));
-                                }
-                            });
-                        } else if (response.statusCode() == 419) {
-                            System.err.println("Too many requests!");
-                        } else {
-                            System.out.println("Request done");
-                            next.handle(Future.succeededFuture(response.bodyAsJsonObject()));
-                        }
-                    } else {
-                        System.out.println("Something went wrong " + ar.cause().getMessage());
-                    }
-                });
+                internalUpdate(search, next, since_id, true);
             }
-        } catch (UnsupportedEncodingException e) {
-            System.err.println("Awesome developer error " + e);
-        }
     }
 
 }
